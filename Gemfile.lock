@@ -1,3 +1,12 @@
+PATH
+  remote: /Users/curtwilhelm/git/rs-services/vcloud-rest
+  specs:
+    vcloud-rest (1.4.1)
+      httpclient (~> 2.3, >= 2.3.3)
+      nokogiri (>= 1.5.10)
+      rest-client (~> 1.6, >= 1.6.7)
+      ruby-progressbar (~> 1.5, >= 1.5.1)
+
 GEM
   remote: https://rubygems.org/
   specs:
@@ -143,11 +152,6 @@ GEM
     thread_safe (0.3.5)
     tzinfo (1.2.2)
       thread_safe (~> 0.1)
-    vcloud-rest (1.4.0)
-      httpclient (~> 2.3, >= 2.3.3)
-      nokogiri (>= 1.5.10)
-      rest-client (~> 1.6, >= 1.6.7)
-      ruby-progressbar (~> 1.5, >= 1.5.1)
     web-console (2.3.0)
       activemodel (>= 4.0)
       binding_of_caller (>= 0.7.2)
@@ -169,7 +173,7 @@ DEPENDENCIES
   sdoc (~> 0.4.0)
   spring
   thin
-  vcloud-rest
+  vcloud-rest!
   web-console (~> 2.0)
   webmock
 

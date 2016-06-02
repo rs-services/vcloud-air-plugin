@@ -12,7 +12,7 @@ gem 'jbuilder', '~> 2.0'
 gem 'sdoc', '~> 0.4.0', group: :doc
 
 gem 'thin'
-gem 'vcloud-rest'
+gem 'vcloud-rest', path: '/Users/curtwilhelm/git/rs-services/vcloud-rest'#'1.4.1'
 
 group :development do
     gem 'web-console', '~> 2.0'
