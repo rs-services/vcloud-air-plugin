@@ -1,3 +1,4 @@
+require 'vcloud-rest/connection'
 class Session
   include ActiveModel::Validations
   include ActiveModel::Conversion

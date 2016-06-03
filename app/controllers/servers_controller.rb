@@ -1,15 +1,18 @@
 class ServersController < ApplicationController
-
   def create
-    session = Session.new(params)
-    connection = session.create
+    begin
+      raise "Error: Missing session params" if params[:session].blank?
+      raise "Error: Missing server params" if params[:server].blank?
 
-    if connection
-      server = Server.new(paramas)
+      session = Session.new(params[:session])
+      connection = session.create
+      raise "unable to get connection: #{connection}" if session.errors.any?
+
+      server = Server.new(params[:server].merge(connection: connection))
       response = server.create
-      render :json, response.to_json
+      render json: response.to_json
+    rescue => e
+      render json: e.message, status: 500
     end
   end
-
-
 end

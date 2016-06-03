@@ -1,3 +1,4 @@
+require 'vcloud-rest/connection'
 class Server
   include ActiveModel::Validations
   include ActiveModel::Conversion
@@ -28,16 +29,16 @@ class Server
     found_org = connection.get_organization_by_name(@org)
     found_vdc = connection.get_vdc_id_by_name(found_org,@vdc)
     found_catalog = connection.get_catalog_by_name(found_org,@catalog)
-    #items = connection.get_catalog_item(found_catalog[@template])
+    found_catitem = connection.get_catalog_item_by_name(found_catalog[:id], @template)
     network_id = connection.get_network_id_by_name(found_org,@parent_network)
-    network_config = {name: @name,  fence_mode: 'bridged',
+    network_config = {name: @network,  fence_mode: 'bridged',
      parent_network: network_id }
      return unless valid?
     connection.create_vapp_from_template(
       found_vdc,
       @name,
       @description,
-      "vappTemplate-#{found_catalog[:items][@template]}",
+      "vappTemplate-#{found_catitem[:items][0][:id]}",
       true,
       network_config)
 

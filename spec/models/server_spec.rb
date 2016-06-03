@@ -20,6 +20,11 @@ RSpec.describe Server, type: :model do
     :description=>"vCHS service catalog",
     :items=>{"W2K12-STD-R2-SQL2K14-WEB"=>"1d677048-2b49-434b-98c2-709cf58e00ba",
     "CentOS64-64BIT"=>"1f201828-0dd6-40d7-adf5-9e659d802e66"}}}
+  let(:catitem){{:id=>"32bf818c-2716-40a6-ae90-2b5f5b6ff907",
+    :description=>"id: cts-6.4-64bit",
+    :items=>[{:id=>"71c3c97e-c329-4883-95f8-86ea45634b76",
+      :name=>"CentOS64-64BIT",
+      :vms_hash=>{"CentOS64-64BIT"=>{:id=>"78681b4b-5b00-4e35-8bbe-2b5aed6f4979"}}}]}}
   let(:vdc){org[:vdcs]["TelstraTestvdc001"]}
   let(:orgs){{"TelstraTestvdc001"=>"9b40b7cb-65b8-4a40-9467-fb6dfa6cebc0"}}
   let(:vcloud_params) { YAML.load_file("#{Rails.root}/config/vcloudair.yml")[Rails.env] }
@@ -32,7 +37,7 @@ RSpec.describe Server, type: :model do
     name: 'myvapp-name',
     description: 'myvapp description'}
   }
-  let(:network_config){{name: params[:name],fence_mode: 'bridged',
+  let(:network_config){{name: params[:network],fence_mode: 'bridged',
     parent_network: "2162b5fd-5c0b-48a3-a52f-9877689ae4ad"}}
 
   it 'create vapp' do
@@ -47,12 +52,15 @@ RSpec.describe Server, type: :model do
     expect(conn).to receive(:get_catalog_by_name).with(org,params[:catalog]).
         and_return(catalog)
 
+    expect(conn).to receive(:get_catalog_item_by_name).with(catalog[:id],
+    params[:template]).and_return(catitem)
+
     expect(conn).to receive(:get_network_id_by_name).with(org,params[:parent_network]).
             and_return("2162b5fd-5c0b-48a3-a52f-9877689ae4ad")
 
     expect(conn).to receive(:create_vapp_from_template).
       with(vdc, params[:name], params[:description],
-              "vappTemplate-#{catalog[:items]["CentOS64-64BIT"]}", true, network_config).
+              "vappTemplate-#{catitem[:items][0][:id]}", true, network_config).
       and_return(vapp_id: '123', task_id: '1')
 
     server = Server.new(params.merge(connection: conn))
