@@ -34,14 +34,16 @@ class Server
     network_config = {name: @network,  fence_mode: 'bridged',
      parent_network: network_id }
      return unless valid?
-    connection.create_vapp_from_template(
+    vapp = connection.create_vapp_from_template(
       found_vdc,
       @name,
       @description,
       "vappTemplate-#{found_catitem[:items][0][:id]}",
       true,
       network_config)
-
+    vapp = connection.get_vapp(vapp[:vapp_id])
+    vm = connection.get_vm(vapp[:vms_hash][@template][:id])
+    vm
     rescue => e
       Rails.logger.error e.message
       errors.add(:base, e.message)

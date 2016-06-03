@@ -25,6 +25,18 @@ RSpec.describe Server, type: :model do
     :items=>[{:id=>"71c3c97e-c329-4883-95f8-86ea45634b76",
       :name=>"CentOS64-64BIT",
       :vms_hash=>{"CentOS64-64BIT"=>{:id=>"78681b4b-5b00-4e35-8bbe-2b5aed6f4979"}}}]}}
+  let(:vapp){{:id=>"19739804-dd6c-4ddd-8faf-8ccd612b9cc6",
+    :name=>"curt-test-2",
+    :description=>"my server description",
+    :status=>"stopped", :ip=>nil,
+    :networks=>[{:id=>"3940bce4-2956-4459-9c17-865dbed7ab2e",
+      :name=>"OnRampMigrations", :scope=>{:gateway=>"10.209.1.1",
+        :netmask=>"255.255.255.0", :fence_mode=>"bridged",
+        :parent_network=>"OnRampMigrations", :retain_network=>"false"}}],
+        :vapp_snapshot=>nil,
+        :vms_hash=>{"CentOS64-64BIT"=>{:addresses=>[nil], :status=>"stopped",
+          :id=>"0ea8459b-a869-4079-8fc0-ecdae6d984c6", :vapp_scoped_local_id=>"CentOS64-64BIT"}}}}
+  let(:vm){{}}
   let(:vdc){org[:vdcs]["TelstraTestvdc001"]}
   let(:orgs){{"TelstraTestvdc001"=>"9b40b7cb-65b8-4a40-9467-fb6dfa6cebc0"}}
   let(:vcloud_params) { YAML.load_file("#{Rails.root}/config/vcloudair.yml")[Rails.env] }
@@ -63,8 +75,12 @@ RSpec.describe Server, type: :model do
               "vappTemplate-#{catitem[:items][0][:id]}", true, network_config).
       and_return(vapp_id: '123', task_id: '1')
 
+    expect(conn).to receive(:get_vapp).with('123').
+      and_return(vapp)
+    expect(conn).to receive(:get_vm).with(vapp[:vms_hash][params[:template]][:id]).
+      and_return(vm)
     server = Server.new(params.merge(connection: conn))
-    expect(server.create()).to eq({vapp_id: '123', task_id: '1'})
+    expect(server.create()).to eq(vm)
   end
 
   it 'create returns error' do
