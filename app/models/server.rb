@@ -53,6 +53,9 @@ class Server
     Rails.logger.debug "-------- rename_vm ------"
     task_id = connection.rename_vm(vm[:id],@name)
     connection.wait_task_completion(task_id)
+    Rails.logger.debug "-------- set_vm_guest_customization ------"
+    task_id = connection.set_vm_guest_customization(vm[:id], @name, {customization_script: script})
+    connection.wait_task_completion(task_id)
     Rails.logger.debug "-------- poweron_vm ------"
     connection.poweron_vm(vm[:id])
     vm
@@ -63,4 +66,8 @@ class Server
   end
 
   private
+
+  def script
+    "echo 'booting from rightscale'".encode('utf-8')
+  end
 end

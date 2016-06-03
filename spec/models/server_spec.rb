@@ -80,13 +80,16 @@ RSpec.describe Server, type: :model do
             "vappTemplate-#{catitem[:items][0][:id]}", false)
       .and_return(vapp_id: vapp[:id], task_id: '1')
 
-    expect(conn).to receive(:wait_task_completion).with("1").exactly(2).times
+    expect(conn).to receive(:wait_task_completion).with("1").exactly(3).times
 
     expect(conn).to receive(:get_vapp).with(vapp[:id])
       .and_return(vapp)
 
     expect(conn).to receive(:rename_vm).with(vm[:id],params[:name]).
       and_return('1')
+
+    expect(conn).to receive(:set_vm_guest_customization).with(vm[:id], params[:name],
+    {customization_script: "echo 'booting from rightscale'"}).and_return('1')
 
     expect(conn).to receive(:poweron_vm).with(vm[:id])
 
