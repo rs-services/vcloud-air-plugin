@@ -9,8 +9,10 @@ class ServersController < ApplicationController
       raise "unable to get connection: #{connection}" if session.errors.any?
 
       server = Server.new(params[:server].merge(connection: connection))
-      response = server.create
-      render json: response.to_json
+      server =server.create
+      Rails.logger.debug "server.create #{server.to_json}"
+      response.headers["Content-Type"] = "application/vnd.vcloudair.servers+json"
+      render json: server.to_json
     rescue => e
       render json: e.message, status: 500
     end
@@ -27,6 +29,8 @@ class ServersController < ApplicationController
 
       server = Server.destroy(connection, params[:server][:org],params[:server][:vdc],
       params[:server][:name], params[:server][:vm_id])
+      response.headers["Content-Type"] = "application/vnd.vcloudair.servers+json"
+      Rails.logger.debug "server.destroy #{server.to_json}"
       render json: server.to_json
     rescue => e
       render json: e.message, status: 500

@@ -24,7 +24,7 @@ class Server
   end
 
   ## server.create
-  # 
+  #
   def create
     orgs = connection.get_organizations
     found_org = connection.get_organization_by_name(@org)
@@ -60,7 +60,7 @@ class Server
     connection.wait_task_completion(task_id)
     Rails.logger.debug "-------- poweron_vm ------"
     connection.poweron_vm(vm[:id])
-    Rails.logger.debug "------- VM ID #{vm.id}"
+    Rails.logger.debug "------- VM ID #{vm[:id]}"
     vm
   rescue => e
     Rails.logger.error e.message

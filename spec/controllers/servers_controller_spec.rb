@@ -36,6 +36,7 @@ RSpec.describe ServersController, type: :controller do
     expect(server).to receive(:create).and_return({vapp_id: 'abc',task_id: '123'})
     post :create, {session: session_params, server: create_params}
     expect(response).to be_successful
+    expect(response.headers["Content-Type"]).to include "application/vnd.vcloudair.servers+json"
     expect(response.body).to eq({vapp_id: 'abc',task_id: '123'}.to_json)
   end
 
@@ -60,6 +61,7 @@ RSpec.describe ServersController, type: :controller do
       and_return({task_id: '1'})
     post :destroy, {session: session_params, server: destroy_params}
     expect(response).to be_successful
+    expect(response.headers["Content-Type"]).to include "application/vnd.vcloudair.servers+json"
     expect(response.body).to eq({task_id: '1'}.to_json)
   end
 end
