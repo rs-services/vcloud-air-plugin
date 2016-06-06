@@ -23,6 +23,8 @@ class Server
     end
   end
 
+  ## server.create
+  # 
   def create
     orgs = connection.get_organizations
     found_org = connection.get_organization_by_name(@org)
@@ -58,12 +60,39 @@ class Server
     connection.wait_task_completion(task_id)
     Rails.logger.debug "-------- poweron_vm ------"
     connection.poweron_vm(vm[:id])
+    Rails.logger.debug "------- VM ID #{vm.id}"
     vm
   rescue => e
     Rails.logger.error e.message
     errors.add(:base, e.message)
     #  return {error: e.message}
   end
+
+  ##
+  # find
+  def self.find(connection,vm_id)
+    connection.get_vm(vm_id)
+  end
+
+  ##
+  # destroy
+  def self.destroy(connection, org, vdc, name, vm_id)
+    Rails.logger.debug '-------- get_organization_by_name ------'
+    found_org = connection.get_organization_by_name(org)
+    Rails.logger.debug '-------- get_vm ------'
+    vm = connection.get_vm(vm_id)
+    Rails.logger.debug '-------- get_vapp_by_name ------'
+    vapp = connection.get_vapp_by_name(found_org, vdc, name)
+    Rails.logger.debug '-------- poweroff_vm ------'
+    task_id = connection.poweroff_vm(vm[:id])
+    connection.wait_task_completion(task_id)
+    Rails.logger.debug '-------- poweroff_vapp ------'
+    task_id = connection.poweroff_vapp(vapp[:id])
+    connection.wait_task_completion(task_id)
+    Rails.logger.debug '-------- delete_vapp ------'
+    connection.delete_vapp(vapp[:id])
+  end
+
 
   private
 

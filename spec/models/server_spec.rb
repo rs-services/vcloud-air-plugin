@@ -1,6 +1,7 @@
 require 'rails_helper'
 
 RSpec.describe Server, type: :model do
+  let(:conn){ double('VCloudClient::Connection')}
   let(:org) do
     { catalogs: { 'Telstra_SOE' => '212435e2-2918-4340-a95c-2a053d0019a7',
                   'RHEL-SSD' => '3f036152-a7bc-4964-83c4-69cc895592ef',
@@ -44,7 +45,7 @@ RSpec.describe Server, type: :model do
       vms_hash: { 'CentOS64-64BIT' => { addresses: [nil], status: 'stopped',
                                         id: '0ea8459b-a869-4079-8fc0-ecdae6d984c6', vapp_scoped_local_id: 'CentOS64-64BIT' } } }
   end
-  let(:vm) { {} }
+  let(:vm) { {id: '123'} }
   let(:vdc) { org[:vdcs]['TelstraTestvdc001'] }
   let(:orgs) { { 'TelstraTestvdc001' => '9b40b7cb-65b8-4a40-9467-fb6dfa6cebc0' } }
   let(:vcloud_params) { YAML.load_file("#{Rails.root}/config/vcloudair.yml")[Rails.env] }
@@ -120,4 +121,22 @@ RSpec.describe Server, type: :model do
     server.create
     expect(server.errors).to include :network
   end
+
+  it "destroy server" do
+    expect(conn).to receive(:get_organization_by_name).with(params[:org])
+      .and_return(org)
+    expect(conn).to receive(:get_vm).with(vm[:id]).and_return(vm)
+    expect(conn).to receive(:poweroff_vm).with(vm[:id]).and_return("1")
+    expect(conn).to receive(:get_vapp_by_name).with(org,params[:vdc],params[:name]).and_return(vapp)
+    expect(conn).to receive(:poweroff_vapp).with(vapp[:id]).and_return('1')
+    expect(conn).to receive(:delete_vapp).with(vapp[:id]).and_return('1')
+    expect(conn).to receive(:wait_task_completion).with("1").exactly(2).times
+    Server.destroy(conn,params[:org], params[:vdc], params[:name],'123')
+  end
+
+  it "find server" do
+    expect(conn).to receive(:get_vm).with('123').and_return(vm)
+    Server.find(conn,'123')
+  end
+
 end

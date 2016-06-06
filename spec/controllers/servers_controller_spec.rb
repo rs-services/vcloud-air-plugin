@@ -16,9 +16,14 @@ RSpec.describe ServersController, type: :controller do
       parent_network: 'OnRampMigrations',
       network: 'TelstraTestvdc001',
       name: 'myvapp-name',
-      description: 'myvapp description'
-  }
-}
+      description: 'myvapp description'}
+    }
+  let(:destroy_params) {
+    { org: 'TelstraTestvdc001',
+      vdc: 'TelstraTestvdc001',
+      name: 'myvapp-name',
+      vm_id: '123'}
+    }
 
   it 'create server' do
     conn = double('VCloudClient::Connection')
@@ -42,5 +47,19 @@ RSpec.describe ServersController, type: :controller do
     post :create , {session: session_params, server: create_params}
     expect(response).to_not be_successful
     expect(response.body).to eq "failed"
+  end
+
+  it 'create failed with error' do
+    conn = double('VCloudClient::Connection')
+    session = double(Session, errors:[])
+    server = double(Server)
+    expect(Session).to receive(:new).with(session_params).and_return(session)
+    expect(session).to receive(:create).and_return(conn)
+    expect(Server).to receive(:destroy).with(conn,destroy_params[:org],
+      destroy_params[:vdc],destroy_params[:name],destroy_params[:vm_id]).
+      and_return({task_id: '1'})
+    post :destroy, {session: session_params, server: destroy_params}
+    expect(response).to be_successful
+    expect(response.body).to eq({task_id: '1'}.to_json)
   end
 end
