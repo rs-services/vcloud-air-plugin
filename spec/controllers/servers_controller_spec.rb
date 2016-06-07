@@ -24,6 +24,9 @@ RSpec.describe ServersController, type: :controller do
       name: 'myvapp-name',
       vm_id: '123'}
     }
+    let(:vm){{id:"976faacd-baf9-4505-a7c3-2e09abad3858",
+      vm_name:"CentOS64-64BIT",
+      status:"stopped",href:"http://1d19b734.ngrok.io/plugin/servers/976faacd-baf9-4505-a7c3-2e09abad3858"}}
 
   it 'create server' do
     conn = double('VCloudClient::Connection')
@@ -37,7 +40,9 @@ RSpec.describe ServersController, type: :controller do
     post :create, {session: session_params, server: create_params}
     expect(response).to be_successful
     expect(response.headers["Content-Type"]).to include "application/vnd.vcloudair.servers+json"
-    expect(response.body).to eq({vapp_id: 'abc',task_id: '123'}.to_json)
+    expect(response.body).to eq({vapp_id: 'abc',
+      task_id: '123',
+      href:"http://test.host/plugin/servers/"}.to_json)
   end
 
   it 'create failed with error' do
@@ -50,7 +55,7 @@ RSpec.describe ServersController, type: :controller do
     expect(response.body).to eq "failed"
   end
 
-  it 'create failed with error' do
+  it 'destroy' do
     conn = double('VCloudClient::Connection')
     session = double(Session, errors:[])
     server = double(Server)
@@ -59,9 +64,37 @@ RSpec.describe ServersController, type: :controller do
     expect(Server).to receive(:destroy).with(conn,destroy_params[:org],
       destroy_params[:vdc],destroy_params[:name],destroy_params[:vm_id]).
       and_return({task_id: '1'})
-    post :destroy, {session: session_params, server: destroy_params}
+    post :destroy, {session: session_params, id: destroy_params[:vm_id], server: destroy_params}
     expect(response).to be_successful
     expect(response.headers["Content-Type"]).to include "application/vnd.vcloudair.servers+json"
     expect(response.body).to eq({task_id: '1'}.to_json)
   end
+
+  it "show" do
+    conn = double('VCloudClient::Connection')
+    session = double(Session, errors:[])
+    server = double(Server)
+    expect(Session).to receive(:new).with(session_params).and_return(session)
+    expect(session).to receive(:create).and_return(conn)
+    expect(Server).to receive(:find).with(conn,vm[:id]).
+      and_return(vm)
+    post :show, {session: session_params, id: vm[:id]}
+    expect(response).to be_successful
+    expect(response.headers["Content-Type"]).to include "application/vnd.vcloudair.servers+json"
+    expect(response.body).to eq(vm.to_json)
+  end
+
+  it "show with error" do
+    conn = double('VCloudClient::Connection')
+    session = double(Session, errors:[])
+    server = double(Server)
+    expect(Session).to receive(:new).with(session_params).and_return(session)
+    expect(session).to receive(:create).and_return(conn)
+    expect(Server).to receive(:find).with(conn,'987').
+      and_raise(RuntimeError,"failed")
+    post :show, {session: session_params, id: '987'}
+    expect(response).to_not be_successful
+    expect(response.body).to eq "failed"
+  end
+
 end
