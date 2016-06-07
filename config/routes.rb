@@ -1,3 +1,5 @@
 Rails.application.routes.draw do
-  resource :servers
+  scope "/plugin" do
+    resources :servers
+  end
 end
