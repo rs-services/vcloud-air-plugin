@@ -60,40 +60,39 @@ class Server
     task_id = connection.set_vm_guest_customization(vm[:id], @name, {customization_script: script})
     connection.wait_task_completion(task_id)
     Rails.logger.debug "-------- poweron_vm ------"
-    connection.poweron_vm(vm[:id])
-    Rails.logger.debug "------- VM ID #{vm[:id]}"
-    vm
+    connection.poweron_vapp(vapp[:id])
+    Rails.logger.debug "------- vApp ID #{vapp[:id]}"
+    vapp
   rescue => e
     Rails.logger.error e.message
     errors.add(:base, e.message)
-    #  return {error: e.message}
   end
 
   ##
   # find
-  def self.find(vm_id)
+  def self.find(id)
     connection = Session.create
-    connection.get_vm(vm_id)
+    connection.get_vapp(id)
   end
 
   ##
   # destroy
-  def self.destroy(org, vdc, name, vm_id)
+  def self.destroy(id)
     connection = Session.create
-    Rails.logger.debug '-------- get_organization_by_name ------'
-    found_org = connection.get_organization_by_name(org)
-    Rails.logger.debug '-------- get_vm ------'
-    vm = connection.get_vm(vm_id)
-    Rails.logger.debug '-------- get_vapp_by_name ------'
-    vapp = connection.get_vapp_by_name(found_org, vdc, name)
-    Rails.logger.debug '-------- poweroff_vm ------'
-    task_id = connection.poweroff_vm(vm[:id])
-    connection.wait_task_completion(task_id)
-    Rails.logger.debug '-------- poweroff_vapp ------'
-    task_id = connection.poweroff_vapp(vapp[:id])
+    # Rails.logger.debug '-------- get_organization_by_name ------'
+    # found_org = connection.get_organization_by_name(org)
+    # Rails.logger.debug '-------- get_vm ------'
+    # vm = connection.get_vm(vm_id)
+    # Rails.logger.debug '-------- get_vapp_by_name ------'
+    # vapp = connection.get_vapp_by_name(found_org, vdc, name)
+    # Rails.logger.debug '-------- poweroff_vm ------'
+    # task_id = connection.poweroff_vm(vm[:id])
+    # connection.wait_task_completion(task_id)
+    # Rails.logger.debug '-------- poweroff_vapp ------'
+    task_id = connection.poweroff_vapp(id)
     connection.wait_task_completion(task_id)
     Rails.logger.debug '-------- delete_vapp ------'
-    connection.delete_vapp(vapp[:id])
+    connection.delete_vapp(id)
   end
 
 

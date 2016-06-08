@@ -1,5 +1,4 @@
 class ServersController < ApplicationController
-#  before_filter :create_session
   #before_filter :authenticate_shared_secret
 
 
@@ -9,7 +8,7 @@ class ServersController < ApplicationController
 
       server = Server.new(params[:server])
       server = server.create
-      server.merge!(href: "http://#{request.env['HTTP_HOST']}#{request.env['PATH_INFO']}/#{server[:id]}")
+      server.merge!(href: server_path(server[:id]))
       Rails.logger.debug "server.create #{server.to_json}"
       response.headers["Content-Type"] = "application/vnd.vcloudair.servers+json"
       response.headers["Location"] = server[:href]
@@ -21,10 +20,9 @@ class ServersController < ApplicationController
 
   def destroy
     begin
-      raise "Error: Missing server params" if params[:server].blank?
+      raise "Error: Missing id param" if params[:id].blank?
 
-      server = Server.destroy(params[:server][:org],params[:server][:vdc],
-      params[:server][:name], params[:id])
+      server = Server.destroy(params[:id])
       response.headers["Content-Type"] = "application/vnd.vcloudair.servers+json"
       Rails.logger.debug "server.destroy #{server.to_json}"
       render json: server.to_json, status: 204
@@ -38,20 +36,14 @@ class ServersController < ApplicationController
       raise "Error: Missing id param" if params[:id].blank?
 
       server = Server.find(params[:id])
-      server.merge!(href: "http://#{request.env['HTTP_HOST']}#{request.env['PATH_INFO']}/#{params[:id]}")
+      server.merge!(href: server_path(server[:id]))
       response.headers["Content-Type"] = "application/vnd.vcloudair.servers+json"
       render json: server.to_json, status: 200
+    rescue VCloudClient::UnauthorizedAccess => e
+      render nothing: true, status: 404
     rescue => e
       render json: e.message, status: 500
     end
   end
-
-  private
-  # def create_session
-  #   config = YAML.load_file("#{Rails.root}/config/vcloudair.yml")[Rails.env]
-  #   session = Session.new(config)
-  #   @connection = session.create
-  #   raise "unable to get connection: #{connection}" if session.errors.any?
-  # end
 
 end

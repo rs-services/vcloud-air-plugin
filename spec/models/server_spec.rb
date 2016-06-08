@@ -92,7 +92,7 @@ RSpec.describe Server, type: :model do
     expect(conn).to receive(:set_vm_guest_customization).with(vm[:id], params[:name],
     {customization_script: "echo 'booting from rightscale'"}).and_return('1')
 
-    expect(conn).to receive(:poweron_vm).with(vm[:id])
+    expect(conn).to receive(:poweron_vapp).with(vapp[:id])
 
     expect(conn).to receive(:add_org_network_to_vapp).with(vapp[:id],
                                                            { name: params[:network], id: '2162b5fd-5c0b-48a3-a52f-9877689ae4ad' },
@@ -104,7 +104,7 @@ RSpec.describe Server, type: :model do
       .and_return(vm)
     expect(Session).to receive(:create).and_return(conn)
     server = Server.new(params)
-    expect(server.create).to eq(vm)
+    expect(server.create).to eq(vapp)
   end
 
   it 'create returns error' do
@@ -126,21 +126,21 @@ RSpec.describe Server, type: :model do
   end
 
   it "destroy server" do
-    expect(conn).to receive(:get_organization_by_name).with(params[:org])
-      .and_return(org)
-    expect(conn).to receive(:get_vm).with(vm[:id]).and_return(vm)
-    expect(conn).to receive(:poweroff_vm).with(vm[:id]).and_return("1")
-    expect(conn).to receive(:get_vapp_by_name).with(org,params[:vdc],params[:name]).and_return(vapp)
+    # expect(conn).to receive(:get_organization_by_name).with(params[:org])
+    #   .and_return(org)
+    # expect(conn).to receive(:get_vm).with(vm[:id]).and_return(vm)
+    # expect(conn).to receive(:poweroff_vm).with(vm[:id]).and_return("1")
+    # expect(conn).to receive(:get_vapp_by_name).with(org,params[:vdc],params[:name]).and_return(vapp)
     expect(conn).to receive(:poweroff_vapp).with(vapp[:id]).and_return('1')
     expect(conn).to receive(:delete_vapp).with(vapp[:id]).and_return('1')
-    expect(conn).to receive(:wait_task_completion).with("1").exactly(2).times
+    expect(conn).to receive(:wait_task_completion).with("1").exactly(1).times
     expect(Session).to receive(:create).and_return(conn)
-    Server.destroy(params[:org], params[:vdc], params[:name],'123')
+    Server.destroy(vapp[:id])
   end
 
   it "find server" do
     expect(Session).to receive(:create).and_return(conn)
-    expect(conn).to receive(:get_vm).with('123').and_return(vm)
+    expect(conn).to receive(:get_vapp).with('123').and_return(vapp)
     Server.find('123')
   end
 
