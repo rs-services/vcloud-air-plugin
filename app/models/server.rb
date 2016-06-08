@@ -51,8 +51,10 @@ class Server
                                                                    fence_mode: 'bridged')
     Rails.logger.debug "------- get_vapp --------"
     vapp = connection.get_vapp(vapp[:vapp_id])
+    Rails.logger.debug "vapp: #{vapp}"
     Rails.logger.debug "-------- get_vm ---------"
     vm = connection.get_vm(vapp[:vms_hash][@template][:id])
+    Rails.logger.debug "vm: #{vm}"
     Rails.logger.debug "-------- rename_vm ------"
     task_id = connection.rename_vm(vm[:id],@name)
     connection.wait_task_completion(task_id)
@@ -61,6 +63,7 @@ class Server
     connection.wait_task_completion(task_id)
     Rails.logger.debug "-------- poweron_vm ------"
     connection.poweron_vapp(vapp[:id])
+    Rails.logger.debug "vapp: #{vapp}"
     Rails.logger.debug "------- vApp ID #{vapp[:id]}"
     vapp
   rescue => e
@@ -72,25 +75,23 @@ class Server
   # find
   def self.find(id)
     connection = Session.create
-    connection.get_vapp(id)
+    Rails.logger.debug '-------- get_vapp ------'
+    vapp = connection.get_vapp(id)
+    Rails.logger.debug "vapp #{vapp}"
+    vapp
   end
 
   ##
   # destroy
   def self.destroy(id)
     connection = Session.create
-    # Rails.logger.debug '-------- get_organization_by_name ------'
-    # found_org = connection.get_organization_by_name(org)
-    # Rails.logger.debug '-------- get_vm ------'
-    # vm = connection.get_vm(vm_id)
-    # Rails.logger.debug '-------- get_vapp_by_name ------'
-    # vapp = connection.get_vapp_by_name(found_org, vdc, name)
-    # Rails.logger.debug '-------- poweroff_vm ------'
-    # task_id = connection.poweroff_vm(vm[:id])
-    # connection.wait_task_completion(task_id)
-    # Rails.logger.debug '-------- poweroff_vapp ------'
-    task_id = connection.poweroff_vapp(id)
-    connection.wait_task_completion(task_id)
+    Rails.logger.debug '-------- get_vapp ------'
+    vapp = connection.get_vapp(id)
+    Rails.logger.debug "vapp #{vapp}"
+    if vapp[:status]!='stopped'
+      task_id = connection.poweroff_vapp(id)
+      connection.wait_task_completion(task_id)
+    end
     Rails.logger.debug '-------- delete_vapp ------'
     connection.delete_vapp(id)
   end
