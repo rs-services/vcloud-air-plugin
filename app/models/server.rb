@@ -14,7 +14,6 @@ class Server
   validates :org, presence: true
   validates :vdc, presence: true
   validates :catalog, presence: true
-  validates :connection, presence: true
   validates :description, presence: true
 
   def initialize(attributes = {})
@@ -26,6 +25,8 @@ class Server
   ## server.create
   #
   def create
+    raise "missing fields" unless self.valid?
+    connection = Session.create
     orgs = connection.get_organizations
     found_org = connection.get_organization_by_name(@org)
     found_vdc = connection.get_vdc_id_by_name(found_org, @vdc)
@@ -70,13 +71,15 @@ class Server
 
   ##
   # find
-  def self.find(connection,vm_id)
+  def self.find(vm_id)
+    connection = Session.create
     connection.get_vm(vm_id)
   end
 
   ##
   # destroy
-  def self.destroy(connection, org, vdc, name, vm_id)
+  def self.destroy(org, vdc, name, vm_id)
+    connection = Session.create
     Rails.logger.debug '-------- get_organization_by_name ------'
     found_org = connection.get_organization_by_name(org)
     Rails.logger.debug '-------- get_vm ------'

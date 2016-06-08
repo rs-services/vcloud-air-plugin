@@ -12,26 +12,18 @@ RSpec.describe Session, type: :model do
             vcloud_params['password'], vcloud_params['org'],
             vcloud_params['api_version']).and_return(conn)
     expect(conn).to receive(:login)
-    session = Session.new(vcloud_params)
-    expect(session.create).to eq(conn)
+    session = Session.create
+    expect(session).to eq(conn)
   end
 
   it 'create session failed' do
-    conn = double('VCloudClient::Connection')
     expect(VCloudClient::Connection).to receive(:new)
       .with(vcloud_params['host'],
             vcloud_params['username'],
             vcloud_params['password'], vcloud_params['org'],
             vcloud_params['api_version']).and_raise(RuntimeError, 'failed')
-    session = Session.new(vcloud_params)
-    session.create
-    expect(session.errors.full_messages).to include 'failed'
-  end
+    session = Session.create
+    expect(session).to eq('Error: failed')
 
-  it 'invalid session' do
-    session = Session.new
-    expect(session.valid?).to eq false
-    session.create
-    expect(session.errors).to include :host
   end
 end

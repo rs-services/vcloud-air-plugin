@@ -102,7 +102,8 @@ RSpec.describe Server, type: :model do
                                                            }, fence_mode: 'bridged' })
     expect(conn).to receive(:get_vm).with(vapp[:vms_hash][params[:template]][:id])
       .and_return(vm)
-    server = Server.new(params.merge(connection: conn))
+    expect(Session).to receive(:create).and_return(conn)
+    server = Server.new(params)
     expect(server.create).to eq(vm)
   end
 
@@ -110,12 +111,14 @@ RSpec.describe Server, type: :model do
     conn = double('VCloudClient::Connection')
     expect(conn).to receive(:get_organizations).and_return(orgs)
       .and_raise(RuntimeError, 'failed')
-    server = Server.new(params.merge(connection: conn))
+    expect(Session).to receive(:create).and_return(conn)
+    server = Server.new(params)
     server.create
     expect(server.errors.full_messages).to include 'failed'
   end
 
   it 'invalid server' do
+    #expect(Session).to receive(:create).and_return(conn)
     server = Server.new
     expect(server.valid?).to eq false
     server.create
@@ -131,12 +134,14 @@ RSpec.describe Server, type: :model do
     expect(conn).to receive(:poweroff_vapp).with(vapp[:id]).and_return('1')
     expect(conn).to receive(:delete_vapp).with(vapp[:id]).and_return('1')
     expect(conn).to receive(:wait_task_completion).with("1").exactly(2).times
-    Server.destroy(conn,params[:org], params[:vdc], params[:name],'123')
+    expect(Session).to receive(:create).and_return(conn)
+    Server.destroy(params[:org], params[:vdc], params[:name],'123')
   end
 
   it "find server" do
+    expect(Session).to receive(:create).and_return(conn)
     expect(conn).to receive(:get_vm).with('123').and_return(vm)
-    Server.find(conn,'123')
+    Server.find('123')
   end
 
 end
