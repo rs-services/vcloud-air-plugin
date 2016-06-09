@@ -36,7 +36,7 @@ RSpec.describe Server, type: :model do
     { id: '19739804-dd6c-4ddd-8faf-8ccd612b9cc6',
       name: 'curt-test-2',
       description: 'my server description',
-      status: 'stopped', ip: nil,
+      status: 'running', ip: nil,
       networks: [{ id: '3940bce4-2956-4459-9c17-865dbed7ab2e',
                    name: 'OnRampMigrations', scope: { gateway: '10.209.1.1',
                                                       netmask: '255.255.255.0', fence_mode: 'bridged',
@@ -102,6 +102,7 @@ RSpec.describe Server, type: :model do
                                                            }, fence_mode: 'bridged' })
     expect(conn).to receive(:get_vm).with(vapp[:vms_hash][params[:template]][:id])
       .and_return(vm)
+    expect(conn).to receive(:logout)
     expect(Session).to receive(:create).and_return(conn)
     server = Server.new(params)
     expect(server.create).to eq(vapp)
@@ -118,7 +119,6 @@ RSpec.describe Server, type: :model do
   end
 
   it 'invalid server' do
-    #expect(Session).to receive(:create).and_return(conn)
     server = Server.new
     expect(server.valid?).to eq false
     server.create
@@ -126,14 +126,11 @@ RSpec.describe Server, type: :model do
   end
 
   it "destroy server" do
-    # expect(conn).to receive(:get_organization_by_name).with(params[:org])
-    #   .and_return(org)
-    # expect(conn).to receive(:get_vm).with(vm[:id]).and_return(vm)
-    # expect(conn).to receive(:poweroff_vm).with(vm[:id]).and_return("1")
-    # expect(conn).to receive(:get_vapp_by_name).with(org,params[:vdc],params[:name]).and_return(vapp)
+    expect(conn).to receive(:get_vapp).with(vapp[:id]).and_return(vapp)
     expect(conn).to receive(:poweroff_vapp).with(vapp[:id]).and_return('1')
     expect(conn).to receive(:delete_vapp).with(vapp[:id]).and_return('1')
     expect(conn).to receive(:wait_task_completion).with("1").exactly(1).times
+    expect(conn).to receive(:logout)
     expect(Session).to receive(:create).and_return(conn)
     Server.destroy(vapp[:id])
   end
@@ -141,7 +138,45 @@ RSpec.describe Server, type: :model do
   it "find server" do
     expect(Session).to receive(:create).and_return(conn)
     expect(conn).to receive(:get_vapp).with('123').and_return(vapp)
+    expect(conn).to receive(:logout)
     Server.find('123')
   end
 
+  it "stop server" do
+    expect(Session).to receive(:create).and_return(conn)
+    expect(conn).to receive(:get_vapp).with('123').exactly(2).times.and_return(vapp)
+    expect(conn).to receive(:suspend_vapp).with('123').and_return("1")
+    expect(conn).to receive(:wait_task_completion).with("1").exactly(1).times
+    expect(conn).to receive(:logout)
+    Server.stop('123')
+  end
+
+  it "start server" do
+    vapp.merge!(status: 'paused')
+    expect(Session).to receive(:create).and_return(conn)
+    expect(conn).to receive(:get_vapp).with('123').exactly(2).times.and_return(vapp)
+    expect(conn).to receive(:discard_suspend_state_vapp).with('123').and_return("1")
+    expect(conn).to receive(:wait_task_completion).with("1").exactly(1).times
+    expect(conn).to receive(:logout)
+    Server.start('123')
+  end
+
+  it "power_off server" do
+    expect(Session).to receive(:create).and_return(conn)
+    expect(conn).to receive(:get_vapp).with('123').exactly(2).times.and_return(vapp)
+    expect(conn).to receive(:poweroff_vapp).with('123').and_return("1")
+    expect(conn).to receive(:wait_task_completion).with("1").exactly(1).times
+    expect(conn).to receive(:logout)
+    Server.power_off('123')
+  end
+
+  it "power_on server" do
+    vapp.merge!(status: 'stopped')
+    expect(Session).to receive(:create).and_return(conn)
+    expect(conn).to receive(:get_vapp).with('123').exactly(2).times.and_return(vapp)
+    expect(conn).to receive(:poweron_vapp).with('123').and_return("1")
+    expect(conn).to receive(:wait_task_completion).with("1").exactly(1).times
+    expect(conn).to receive(:logout)
+    Server.power_on('123')
+  end
 end

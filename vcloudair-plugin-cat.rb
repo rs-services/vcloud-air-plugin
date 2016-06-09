@@ -91,9 +91,10 @@ define provision_vapp(@raw_server) return @vapp do
    $server_object = to_object(@vapp)
    call sys_log("server created",to_s($server))
 end
+
 # delete the server and return the resoruce
 define delete_vapp(@vapp) return @vapp do
-  @server.destroy()
+  @vapp.destroy()
 end
 
 output 'server_status' do

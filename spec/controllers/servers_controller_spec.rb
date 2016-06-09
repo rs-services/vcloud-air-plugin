@@ -69,4 +69,44 @@ RSpec.describe ServersController, type: :controller do
     expect(response.body).to eq "failed"
   end
 
+  it "stop" do
+    server = double(Server)
+    expect(Server).to receive(:stop).with(vapp[:id]).
+      and_return(vapp)
+    post :stop, {id: vapp[:id]}
+    expect(response).to be_successful
+    expect(response.headers["Content-Type"]).to include "application/vnd.vcloudair.servers+json"
+    expect(response.body).to eq(vapp.to_json)
+  end
+
+  it "start" do
+    server = double(Server)
+    expect(Server).to receive(:start).with(vapp[:id]).
+      and_return(vapp)
+    post :start, {id: vapp[:id]}
+    expect(response).to be_successful
+    expect(response.headers["Content-Type"]).to include "application/vnd.vcloudair.servers+json"
+    expect(response.body).to eq(vapp.to_json)
+  end
+
+  it "power_off" do
+    server = double(Server)
+    expect(Server).to receive(:power_off).with(vapp[:id]).
+      and_return(vapp)
+    post :power_off, {id: vapp[:id]}
+    expect(response).to be_successful
+    expect(response.headers["Content-Type"]).to include "application/vnd.vcloudair.servers+json"
+    expect(response.body).to eq(vapp.to_json)
+  end
+
+  it "power_on" do
+    server = double(Server)
+    expect(Server).to receive(:power_on).with(vapp[:id]).
+      and_return(vapp)
+    post :power_on, {id: vapp[:id]}
+    expect(response).to be_successful
+    expect(response.headers["Content-Type"]).to include "application/vnd.vcloudair.servers+json"
+    expect(response.body).to eq(vapp.to_json)
+  end
+
 end

@@ -65,6 +65,7 @@ class Server
     connection.poweron_vapp(vapp[:id])
     Rails.logger.debug "vapp: #{vapp}"
     Rails.logger.debug "------- vApp ID #{vapp[:id]}"
+    connection.logout
     vapp
   rescue => e
     Rails.logger.error e.message
@@ -78,6 +79,8 @@ class Server
     Rails.logger.debug '-------- get_vapp ------'
     vapp = connection.get_vapp(id)
     Rails.logger.debug "vapp #{vapp}"
+    Rails.logger.debug "vapp.status  == #{vapp[:status]}"
+    connection.logout
     vapp
   end
 
@@ -88,14 +91,99 @@ class Server
     Rails.logger.debug '-------- get_vapp ------'
     vapp = connection.get_vapp(id)
     Rails.logger.debug "vapp #{vapp}"
-    if vapp[:status]!='stopped'
+    if vapp[:status] =~ /running|paused/
+      Rails.logger.debug '-------- poweroff_vapp ------'
       task_id = connection.poweroff_vapp(id)
       connection.wait_task_completion(task_id)
     end
     Rails.logger.debug '-------- delete_vapp ------'
     connection.delete_vapp(id)
+    connection.logout
+    vapp
   end
 
+  ##
+  # stop
+  def self.stop(id)
+    connection = Session.create
+    Rails.logger.debug '-------- get_vapp ------'
+    vapp = connection.get_vapp(id)
+    Rails.logger.debug "vapp #{vapp}"
+    if vapp[:status]=='running'
+      Rails.logger.debug '-------- suspend_vapp ------'
+      task_id = connection.suspend_vapp(id)
+      connection.wait_task_completion(task_id)
+    end
+    Rails.logger.debug '-------- get_vapp ------'
+    vapp = connection.get_vapp(id)
+    Rails.logger.debug "vapp #{vapp}"
+    Rails.logger.debug "vapp.status  == #{vapp[:status]}"
+    connection.logout
+    vapp
+  end
+
+  ##
+  # start
+  # :args: String ID
+  def self.start(id)
+    connection = Session.create
+    Rails.logger.debug '-------- get_vapp ------'
+    vapp = connection.get_vapp(id)
+    Rails.logger.debug "vapp #{vapp}"
+    if vapp[:status]=='paused'
+      Rails.logger.debug '-------- discard_suspend_state_vapp ------'
+      task_id = connection.discard_suspend_state_vapp(id)
+      connection.wait_task_completion(task_id)
+    end
+    Rails.logger.debug '-------- get_vapp ------'
+    vapp = connection.get_vapp(id)
+    Rails.logger.debug "vapp #{vapp}"
+    Rails.logger.debug "vapp.status  == #{vapp[:status]}"
+    connection.logout
+    vapp
+  end
+
+  ##
+  # power_on
+  # :args: String ID
+  def self.power_on(id)
+    connection = Session.create
+    Rails.logger.debug '-------- get_vapp ------'
+    vapp = connection.get_vapp(id)
+    Rails.logger.debug "vapp #{vapp}"
+    if vapp[:status]=='stopped'
+      Rails.logger.debug '-------- poweron_vapp ------'
+      task_id = connection.poweron_vapp(id)
+      connection.wait_task_completion(task_id)
+    end
+    Rails.logger.debug '-------- get_vapp ------'
+    vapp = connection.get_vapp(id)
+    Rails.logger.debug "vapp #{vapp}"
+    Rails.logger.debug "vapp.status  == #{vapp[:status]}"
+    connection.logout
+    vapp
+  end
+
+  ##
+  # power_off
+  # :args: String ID
+  def self.power_off(id)
+    connection = Session.create
+    Rails.logger.debug '-------- get_vapp ------'
+    vapp = connection.get_vapp(id)
+    Rails.logger.debug "vapp #{vapp}"
+    if vapp[:status]=='running'
+      Rails.logger.debug '-------- poweroff_vapp ------'
+      task_id = connection.poweroff_vapp(id)
+      connection.wait_task_completion(task_id)
+    end
+    Rails.logger.debug '-------- get_vapp ------'
+    vapp = connection.get_vapp(id)
+    Rails.logger.debug "vapp #{vapp}"
+    Rails.logger.debug "vapp.status  == #{vapp[:status]}"
+    connection.logout
+    vapp
+  end
 
   private
 
