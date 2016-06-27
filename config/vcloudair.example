@@ -2,8 +2,9 @@ defaults: &defaults
   host: https://p15v4-vcd.vchs.vmware.com
   username:
   password:
-  org: 
+  org:
   api_version: 5.6
+  shared-api-key: 'change this key to match X-Api-Shared-Secret in CAT file'
   logging: debug
 
 development:
