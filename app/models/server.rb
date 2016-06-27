@@ -89,7 +89,7 @@ class Server
     Rails.logger.debug '-------- poweron_vapp ------'
     task_id = connection.poweron_vapp(vapp[:id])
     connection.wait_task_completion(task_id)
-    Rails.logger.debug "-------- poweroff_vm ------"
+    Rails.logger.debug "-------- poweroff_vap ------"
     task_id = connection.poweroff_vapp(vapp[:id])
     connection.wait_task_completion(task_id)
     vapp = connection.get_vapp(vapp[:id])

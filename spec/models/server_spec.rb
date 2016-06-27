@@ -36,7 +36,7 @@ RSpec.describe Server, type: :model do
     { id: '19739804-dd6c-4ddd-8faf-8ccd612b9cc6',
       name: 'curt-test-2',
       description: 'my server description',
-      status: 'running', ip: nil,
+      status: 'stopped', ip: '1.2.3.4',
       networks: [{ id: '3940bce4-2956-4459-9c17-865dbed7ab2e',
                    name: 'OnRampMigrations', scope: { gateway: '10.209.1.1',
                                                       netmask: '255.255.255.0', fence_mode: 'bridged',
@@ -49,6 +49,7 @@ RSpec.describe Server, type: :model do
   let(:vdc) { org[:vdcs]['TelstraTestvdc001'] }
   let(:orgs) { { 'TelstraTestvdc001' => '9b40b7cb-65b8-4a40-9467-fb6dfa6cebc0' } }
   let(:vcloud_params) { YAML.load_file("#{Rails.root}/config/vcloudair.yml")[Rails.env] }
+  let(:found_network) { {id: '12345abc'} }
   let(:params) do
     { org: 'TelstraTestvdc001',
       vdc: 'TelstraTestvdc001',
@@ -56,7 +57,13 @@ RSpec.describe Server, type: :model do
       catalog: 'Public Catalog',
       network: 'TelstraTestvdc001',
       name: 'myvapp-name',
-      description: 'myvapp description' }
+      description: 'myvapp description',
+      deployment: 'my deployment',
+      server_template: 'my server_template',
+      cloud: 'vCloudPOC',
+      rs_api_host: 'us-4.rightscale.com',
+      rs_api_refresh_token: 'mytoken'
+    }
   end
   it 'create vapp' do
     conn = double('VCloudClient::Connection')
@@ -73,33 +80,33 @@ RSpec.describe Server, type: :model do
     expect(conn).to receive(:get_catalog_item_by_name).with(catalog[:id],
                                                             params[:template]).and_return(catitem)
 
-    expect(conn).to receive(:get_network_id_by_name).with(org, params[:network])
-      .and_return('2162b5fd-5c0b-48a3-a52f-9877689ae4ad')
+    expect(conn).to receive(:get_network_by_name).with(org, params[:network])
+      .and_return(found_network)
 
     expect(conn).to receive(:create_vapp_from_template)
       .with(vdc, params[:name], params[:description],
-            "vappTemplate-#{catitem[:items][0][:id]}", false)
+            "vappTemplate-#{catitem[:items][0][:id]}", false,
+            {fence_mode: 'bridged', name: params[:network], parent_network: found_network[:id]})
       .and_return(vapp_id: vapp[:id], task_id: '1')
 
-    expect(conn).to receive(:wait_task_completion).with("1").exactly(3).times
+    expect(conn).to receive(:wait_task_completion).with("1").exactly(7).times
 
     expect(conn).to receive(:get_vapp).with(vapp[:id])
-      .and_return(vapp)
+      .and_return(vapp).exactly(4).times
 
     expect(conn).to receive(:rename_vm).with(vm[:id],params[:name]).
       and_return('1')
 
     expect(conn).to receive(:set_vm_guest_customization).with(vm[:id], params[:name],
-    {customization_script: "echo 'booting from rightscale'"}).and_return('1')
+    {enabled: true, customization_script: /Installing RightLink/,
+      admin_passwd_enabled: true,admin_passwd: 'right$cale'}).and_return('1')
 
-    expect(conn).to receive(:poweron_vapp).with(vapp[:id])
+    expect(conn).to receive(:poweron_vapp).with(vapp[:id]).and_return('1').
+      exactly(2).times
+    expect(conn).to receive(:poweroff_vapp).with(vapp[:id]).and_return('1')
+    expect(conn).to receive(:add_vm_network).with(vm[:id],found_network,
+      {fence_mode: 'bridged'}).and_return('1')
 
-    expect(conn).to receive(:add_org_network_to_vapp).with(vapp[:id],
-                                                           { name: params[:network], id: '2162b5fd-5c0b-48a3-a52f-9877689ae4ad' },
-                                                           { parent_network: {
-                                                             name: params[:network],
-                                                             id: '2162b5fd-5c0b-48a3-a52f-9877689ae4ad'
-                                                           }, fence_mode: 'bridged' })
     expect(conn).to receive(:get_vm).with(vapp[:vms_hash][params[:template]][:id])
       .and_return(vm)
     expect(conn).to receive(:logout)
@@ -126,10 +133,11 @@ RSpec.describe Server, type: :model do
   end
 
   it "destroy server" do
+    vapp.merge!(status: 'stopped')
     expect(conn).to receive(:get_vapp).with(vapp[:id]).and_return(vapp)
-    expect(conn).to receive(:poweroff_vapp).with(vapp[:id]).and_return('1')
+    #expect(conn).to receive(:poweroff_vapp).with(vapp[:id]).and_return('1')
     expect(conn).to receive(:delete_vapp).with(vapp[:id]).and_return('1')
-    expect(conn).to receive(:wait_task_completion).with("1").exactly(1).times
+    #expect(conn).to receive(:wait_task_completion).with("1").exactly(1).times
     expect(conn).to receive(:logout)
     expect(Session).to receive(:create).and_return(conn)
     Server.destroy(vapp[:id])
@@ -143,6 +151,7 @@ RSpec.describe Server, type: :model do
   end
 
   it "stop server" do
+    vapp.merge!(status: 'running')
     expect(Session).to receive(:create).and_return(conn)
     expect(conn).to receive(:get_vapp).with('123').exactly(2).times.and_return(vapp)
     expect(conn).to receive(:suspend_vapp).with('123').and_return("1")
@@ -162,6 +171,7 @@ RSpec.describe Server, type: :model do
   end
 
   it "power_off server" do
+    vapp.merge!(status: 'running')
     expect(Session).to receive(:create).and_return(conn)
     expect(conn).to receive(:get_vapp).with('123').exactly(2).times.and_return(vapp)
     expect(conn).to receive(:poweroff_vapp).with('123').and_return("1")
