@@ -7,6 +7,7 @@ parameter "network" do
   label "Network"
   description "Select the network to launch into"
   allowed_values "TELSTRATESTVDC001-DEFAULT-ROUTED", "DAVETEST-NET","OnRampMigrations","TELSTRATESTVDC001-DEFAULT-ISOLATED"
+  default "OnRampMigrations"
   operations "launch"
 end
 
@@ -14,16 +15,32 @@ parameter "os" do
   type "list"
   label "Operating System"
   description "Select the OS to boot"
-  allowed_values "CentOS64-64BIT", "something else"
+  allowed_values "CentOS", "Ubuntu", "Windows"
+  default "CentOS"
   operations "launch"
 end
 
+mapping "os_mapping" do
+  {
+    "CentOS" => {
+      "image" => "CentOS64-64BIT",
+    },
+    "Ubuntu" => {
+      "image" => "Ubuntu Server 12.04 LTS (amd64 20150127)",
+    },
+    "Windows" => {
+      "image" => "W2K12-STD-64BIT",
+    },
+  }
+end
+
+
 resource "vapp", type: "vcloudair.server" do
   org "TelstraTestvdc001"                   # the vcloudair organization
-  name "curt-test-3"                        # the vapp name
+  name "Server 1"                           # the vapp name
   vdc "TelstraTestvdc001"                   # the virtual data center  for the vapp
   network $network                          # the network(s) to place the vApp
-  template $os                              # the template to build the vApp
+  template map($os_mapping, $os, 'image')   # the template to build the vApp
   catalog "Public Catalog"                  # The catalog where to find the template
   description "My vApp from SelfService"    # The description of the vApp
   cloud "vCloudPOC"                         # name of the UCA cloud
@@ -36,8 +53,8 @@ namespace "vcloudair" do
     host "http://d33297d9.ngrok.io" # HTTP endpoint presenting an API defined by self-serviceto act on resources
     path "/plugin"  # path prefix for all resources, RightScale account_id substituted in for multi-tenancy
     headers do {
-      "user-agent" => "self_service" ,     # special headers as needed
-      "X-Api-Shared-Secret" => "Change to a shared secret value"
+      "user-agent" => "self_service" ,          # special headers as needed
+      "X-Api-Shared-Secret" => "theapisecret"  #change this key to match api-shared-secret plugin config/vcloudair.yml file
     } end
   end
 
@@ -121,8 +138,17 @@ define provision_vapp(@raw_server) return @vapp do
    call sys_log("server created",to_s($server))
 end
 
-# delete the server and return the resoruce
+# delete the server and return the resource
+# first find all the servers in RS CM
+# issue terminate action to remove the server objects
+# wait until they are all terminated
+# delete the vapp last
 define delete_vapp(@vapp) return @vapp do
+  @servers = rs.servers.get(filter: [join(["deployment_href==",@@deployment.href])])
+  @servers.terminate()
+  sub timeout: 5m do
+    sleep_until(all?(@servers.state[], "inactive"))
+  end
   @vapp.destroy()
 end
 
