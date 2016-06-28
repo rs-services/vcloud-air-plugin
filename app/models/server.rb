@@ -54,7 +54,7 @@ class Server
     Rails.logger.debug "------- create_vapp_from_template -------"
     vapp = connection.create_vapp_from_template(
       found_vdc,
-      @name,
+      name,
       @description,
       "vappTemplate-#{found_catitem[:items][0][:id]}",
       false,
@@ -81,7 +81,7 @@ class Server
 
     # rename vm
     Rails.logger.debug "-------- rename_vm ------"
-    task_id = connection.rename_vm(vm[:id],@name)
+    task_id = connection.rename_vm(vm[:id],name)
     connection.wait_task_completion(task_id)
 
     # poweron and off to correct network configuration
@@ -103,7 +103,7 @@ class Server
     # use guest customization to install RL10
     # need to also send new password, otherwise there is no password
     Rails.logger.debug "-------- set_vm_guest_customization ------"
-    task_id = connection.set_vm_guest_customization(vm[:id], @name,
+    task_id = connection.set_vm_guest_customization(vm[:id], name,
     {enabled: true, customization_script: script(dns: found_network[:gateway]),
       admin_passwd_enabled: true,admin_passwd: 'right$cale'})
     connection.wait_task_completion(task_id)
@@ -245,6 +245,10 @@ class Server
   end
 
   private
+  # rename server to comply with vcloud-air naming.  can not contain spaces
+  def name
+    @name.gsub(" ","-")
+  end
 
   # run script to enable RL10
   def script(params={})
