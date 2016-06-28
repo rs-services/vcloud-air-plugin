@@ -247,7 +247,7 @@ class Server
   private
   # rename server to comply with vcloud-air naming.  can not contain spaces
   def name
-    @name.gsub(" ","-")
+    @name.gsub(" ","-") if @name
   end
 
   # run script to enable RL10
