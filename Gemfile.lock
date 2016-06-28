@@ -1,7 +1,9 @@
-PATH
-  remote: /Users/curtwilhelm/git/rs-services/vcloud-rest
+GIT
+  remote: https://github.com/rs-services/vcloud-rest.git
+  revision: faa88ddbcfd0c4f9d468811c9a79def4302246cd
+  ref: faa88ddbcfd0c4f9d468811c9a79def4302246cd
   specs:
-    vcloud-rest (1.4.1)
+    vcloud-rest (1.5)
       httpclient (~> 2.3, >= 2.3.3)
       nokogiri (>= 1.5.10)
       rest-client (~> 1.6, >= 1.6.7)
@@ -58,7 +60,7 @@ GEM
     eventmachine (1.2.0.1)
     globalid (0.3.6)
       activesupport (>= 4.1.0)
-    httpclient (2.7.1)
+    httpclient (2.8.0)
     i18n (0.7.0)
     jbuilder (2.5.0)
       activesupport (>= 3.0.0, < 5.1)
@@ -128,7 +130,7 @@ GEM
       rspec-mocks (~> 3.4.0)
       rspec-support (~> 3.4.0)
     rspec-support (3.4.1)
-    ruby-progressbar (1.7.5)
+    ruby-progressbar (1.8.1)
     sdoc (0.4.1)
       json (~> 1.7, >= 1.7.7)
       rdoc (~> 4.0)
