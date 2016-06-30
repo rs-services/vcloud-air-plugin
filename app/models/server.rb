@@ -32,27 +32,27 @@ class Server
   #
   def create
     raise "missing fields" unless self.valid?
-    connection = Session.create
-    orgs = connection.get_organizations
+    @connection = Session.create
+    orgs = @connection.get_organizations
     Rails.logger.debug "------- get_organization_by_name(#{@org}) -------"
-    found_org = connection.get_organization_by_name(@org)
+    found_org = @connection.get_organization_by_name(@org)
 
     Rails.logger.debug "------- get_vdc_id_by_name(#{@found_org},#{@vdc}) -------"
-    found_vdc = connection.get_vdc_id_by_name(found_org, @vdc)
+    found_vdc = @connection.get_vdc_id_by_name(found_org, @vdc)
 
     Rails.logger.debug "------- get_catalog_by_name(#{found_org},#{@catalog}) -------"
-    found_catalog = connection.get_catalog_by_name(found_org, @catalog)
+    found_catalog = @connection.get_catalog_by_name(found_org, @catalog)
     Rails.logger.debug "found_catalog #{found_catalog}"
 
     Rails.logger.debug "------- get_catalog_item_by_name(#{found_catalog[:id]},#{@template}) -------"
-    found_catitem = connection.get_catalog_item_by_name(found_catalog[:id], @template)
+    found_catitem = @connection.get_catalog_item_by_name(found_catalog[:id], @template)
     Rails.logger.debug "found_catitem #{found_catitem}"
 
     Rails.logger.debug "------- get_network_id_by_name ---------"
-    found_network = connection.get_network_by_name(found_org, network)
+    found_network = @connection.get_network_by_name(found_org, network)
 
     Rails.logger.debug "------- create_vapp_from_template -------"
-    vapp = connection.create_vapp_from_template(
+    vapp = @connection.create_vapp_from_template(
       found_vdc,
       name,
       @description,
@@ -60,70 +60,66 @@ class Server
       false,
       {fence_mode: 'bridged', name: @network, parent_network: found_network[:id]}
       )
-    connection.wait_task_completion(vapp[:task_id])
-
-    #remove vDC non-existant VM Network
-     vapp = connection.get_vapp(vapp[:vapp_id])
-
+    @connection.wait_task_completion(vapp[:task_id])
 
     Rails.logger.debug "------- get_vapp --------"
-    vapp = connection.get_vapp(vapp[:id])
+    vapp = @connection.get_vapp(vapp[:vapp_id])
+    #wait for vapp to be stopped
+    wait(vapp,"stopped")
     Rails.logger.debug "vapp: #{vapp}"
 
     Rails.logger.debug "-------- get_vm ---------"
-    vm = connection.get_vm(vapp[:vms_hash][@template][:id])
+    vm = @connection.get_vm(vapp[:vms_hash][@template][:id])
     Rails.logger.debug "vm: #{vm}"
 
-
-    Rails.logger.debug "------- add_vm_network --------"
-    task_id = connection.add_vm_network(vm[:id],found_network,{fence_mode: 'bridged'})
-    connection.wait_task_completion(task_id)
+    Rails.logger.debug "-------- add_vm_network --------"
+    task_id = @connection.add_vm_network(vm[:id],found_network,{fence_mode: 'bridged'})
+    @connection.wait_task_completion(task_id)
 
     # rename vm
     Rails.logger.debug "-------- rename_vm ------"
-    task_id = connection.rename_vm(vm[:id],name)
-    connection.wait_task_completion(task_id)
+    task_id = @connection.rename_vm(vm[:id],name)
+    @connection.wait_task_completion(task_id)
 
     # poweron and off to correct network configuration
     # without power cycle eth0 is not activated
     Rails.logger.debug '-------- poweron_vapp ------'
-    task_id = connection.poweron_vapp(vapp[:id])
-    connection.wait_task_completion(task_id)
+    task_id = @connection.poweron_vapp(vapp[:id])
+    @connection.wait_task_completion(task_id)
+    # wait for vapp to be running
+    wait(vapp, "running")
+
     Rails.logger.debug "-------- poweroff_vap ------"
-    task_id = connection.poweroff_vapp(vapp[:id])
-    connection.wait_task_completion(task_id)
-    vapp = connection.get_vapp(vapp[:id])
+    task_id = @connection.poweroff_vapp(vapp[:id])
+    @connection.wait_task_completion(task_id)
+    # wait for vapp to be stopped
+    wait(vapp, "stopped")
 
-    # make sure the vapp/vm is stopped
-    while vapp[:status]!='stopped' do
-      sleep 1
-      vapp = connection.get_vapp(vapp[:id])
-    end
-
+    Rails.logger.debug "-------- set_vm_guest_customization ------"
     # use guest customization to install RL10
     # need to also send new password, otherwise there is no password
-    Rails.logger.debug "-------- set_vm_guest_customization ------"
-    task_id = connection.set_vm_guest_customization(vm[:id], name,
+    task_id = @connection.set_vm_guest_customization(vm[:id], name,
     {enabled: true, customization_script: script(dns: found_network[:gateway]),
       admin_passwd_enabled: true,admin_passwd: 'right$cale'})
-    connection.wait_task_completion(task_id)
+    @connection.wait_task_completion(task_id)
 
     # poweron vapp/vm
     Rails.logger.debug '-------- poweron_vapp ------'
-    task_id = connection.poweron_vapp(vapp[:id])
-    connection.wait_task_completion(task_id)
+    task_id = @connection.poweron_vapp(vapp[:id])
+    @connection.wait_task_completion(task_id)
+    wait(vapp,"running")
 
     Rails.logger.debug "------- get_vapp --------"
-    vapp = connection.get_vapp(vapp[:id])
+    vapp = @connection.get_vapp(vapp[:id])
     Rails.logger.debug "vapp: #{vapp}"
     Rails.logger.debug "vm: #{vm}"
-    Rails.logger.debug "------- vApp ID #{vapp[:id]}"
+    Rails.logger.info "------- vApp ID #{vapp[:id]}"
 
-    connection.logout
+    @connection.logout
     vapp
   rescue => e
     Rails.logger.error e.message
-    Rails.logger.debug "------- vApp ID #{vapp[:id]}" if vapp
+    Rails.logger.info "------- vApp ID #{vapp[:id]}" if vapp
     errors.add(:base, e.message)
   end
 
@@ -142,22 +138,31 @@ class Server
   ##
   # destroy
   def self.destroy(id)
-    connection = Session.create
+    @connection = Session.create
     Rails.logger.debug '-------- get_vapp ------'
-    vapp = connection.get_vapp(id)
+    vapp = @connection.get_vapp(id)
     Rails.logger.debug "vapp #{vapp}"
     if vapp[:status] == "running"
       Rails.logger.debug '-------- poweroff_vapp ------'
-      task_id = connection.poweroff_vapp(id)
-      connection.wait_task_completion(task_id)
+      task_id = @connection.poweroff_vapp(id)
+      @connection.wait_task_completion(task_id)
     end
-    while vapp[:status]!='stopped' do
-      sleep 1
-      vapp = connection.get_vapp(id)
-    end
+    send(:wait,vapp,"stopped")
     Rails.logger.debug '-------- delete_vapp ------'
-    connection.delete_vapp(id)
-    connection.logout
+    begin
+      @connection.delete_vapp(id)
+    rescue => e
+      # sometimes the poweroff_vapp doesn't work and the vapp becomes
+      # only partially stopped.  this rescue trys another poweroff and delete
+      Rails.logger.debug "ERROR: #{e.message}"
+      if e.message =~ /running/
+        Rails.logger.debug '-------- retrying poweroff_vapp and delete ------'
+        task_id = @connection.poweroff_vapp(id)
+        @connection.wait_task_completion(task_id)
+        @connection.delete_vapp(id)
+      end
+    end
+    @connection.logout
     vapp
   end
 
@@ -245,6 +250,21 @@ class Server
   end
 
   private
+
+  def self.wait(vapp,status)
+    server = Server.new
+    server.send(:wait, vapp, status)
+  end
+  # wait for vapp to change status
+  # expect vapp[:status] to match status before continuing
+  def wait(vapp,status)
+    while vapp[:status] != status do
+      Rails.logger.debug "waiting... vapp status: #{vapp[:status]}"
+      sleep 1
+      vapp = @connection.get_vapp(vapp[:id])
+    end
+  end
+
   # rename server to comply with vcloud-air naming.  can not contain spaces
   def name
     @name.gsub(" ","-") if @name
