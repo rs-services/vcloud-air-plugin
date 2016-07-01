@@ -1,6 +1,12 @@
 require 'rails_helper'
 
 RSpec.describe ServersController, type: :controller do
+
+before{
+  config = YAML.load_file("#{Rails.root}/config/vcloudair.yml")[Rails.env]
+  request.headers["X-Api-Shared-Secret"]=config["api-shared-secret"]
+}
+  
   let(:create_params) {
     { org: 'TelstraTestvdc001',
       vdc: 'TelstraTestvdc001',
