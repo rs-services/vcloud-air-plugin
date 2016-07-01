@@ -1,6 +1,6 @@
 name "vclould air plugin"
 rs_ca_ver 20131202
-short_description "vcloud-air plugin"
+short_description "vCloud Air Plugin Example"
 
 parameter "network" do
   type "list"
@@ -23,13 +23,13 @@ end
 mapping "os_mapping" do
   {
     "CentOS" => {
-      "image" => "CentOS64-64BIT",
+     "template" => "CentOS64-64BIT",
     },
     "Ubuntu" => {
-      "image" => "Ubuntu Server 12.04 LTS (amd64 20150127)",
+     "template" => "Ubuntu Server 12.04 LTS (amd64 20150127)",
     },
     "Windows" => {
-      "image" => "W2K12-STD-64BIT",
+      "template" => "W2K12-STD-64BIT",
     },
   }
 end
@@ -40,7 +40,7 @@ resource "vapp", type: "vcloudair.server" do
   name "Server 1"                           # the vapp name
   vdc "TelstraTestvdc001"                   # the virtual data center  for the vapp
   network $network                          # the network(s) to place the vApp
-  template map($os_mapping, $os, 'image')   # the template to build the vApp
+  template map($os_mapping, $os,'template') # the template to build the vApp
   catalog "Public Catalog"                  # The catalog where to find the template
   description "My vApp from SelfService"    # The description of the vApp
   cloud "vCloudPOC"                         # name of the UCA cloud
@@ -134,8 +134,6 @@ define provision_vapp(@raw_server) return @vapp do
     rs_api_host: join(["us-",$shard_number,".rightscale.com"])
   }
    })
-   $server_object = to_object(@vapp)
-   call sys_log("server created",to_s($server))
 end
 
 # delete the server and return the resource
@@ -146,8 +144,19 @@ end
 define delete_vapp(@vapp) return @vapp do
   @servers = rs.servers.get(filter: [join(["deployment_href==",@@deployment.href])])
   @servers.terminate()
-  sub timeout: 5m do
-    sleep_until(all?(@servers.state[], "inactive"))
+
+
+  $retries=0
+  #sub timeout: 30s do
+  while $retries < 10 do
+    $retries = $retries + 1
+    $servers_object = to_object(@servers)
+    call sys_log("servers terminating", to_s($servers_object))
+    #sleep_until(all?(@servers.state[], "inactive"))
+    if all?(@servers.state[], "inactive")
+      $retries=10
+    end
+    sleep(30s)
   end
   @vapp.destroy()
 end
@@ -223,11 +232,27 @@ end
 define launch_handler(@vapp) return @vapp, $status, $ip do
 
   provision(@vapp)
+  #wait for servers to become operational in CM.
+  #this prevents this CloudApp from changing state to Running before
+  #the servers are operational
+  #sleep(2m)
+  $retries=0
+  #sub timeout: 30s, on_timeout: handle_timeout($retries) do
+  while $retries < 10 do
+    $retries = $retries + 1
+    @servers = rs.servers.get(filter: [join(["deployment_href==",@@deployment.href])])
+    $servers_object = to_object(@servers)
+    call sys_log("servers launching", to_s($servers_object))
+    #sleep_until(all?(@servers.state[], "operational"))
+    if all?(@servers.state[], "operational")
+      $retries =10
+    end
+    sleep(30s)
+  end
 
   $vapp_object = to_object(@vapp)
   $status = $vapp_object["details"][0]["status"]
   $ip = $vapp_object["details"][0]["ip"]
-  call sys_log("server launched",to_s($server))
 end
 
 # stop server from running state
@@ -236,7 +261,6 @@ define do_stop(@vapp) return @vapp,$status, $ip do
   $server_object = to_object(@vapp)
   $status = $server_object["details"][0]["status"]
   $ip = $server_object["details"][0]["ip"]
-  call sys_log("server stopped",to_s($server))
 end
 
 # start the server from paused/suspended state
@@ -245,7 +269,6 @@ define do_start(@vapp) return @vapp,$status, $ip do
   $server_object = to_object(@vapp)
   $status = $server_object["details"][0]["status"]
   $ip = $server_object["details"][0]["ip"]
-  call sys_log("server start",to_s($server))
 end
 
 # power off the server from running state
@@ -254,7 +277,6 @@ define do_power_off(@vapp) return  @vapp,$status,$ip do
   $server_object = to_object(@vapp)
   $status = $server_object["details"][0]["status"]
   $ip = $server_object["details"][0]["ip"]
-  call sys_log("server powered off",to_s($server))
 end
 
 # power on the server from a stopped state
@@ -263,7 +285,6 @@ define do_power_on(@vapp) return @vapp,$status,$ip do
   $server_object = to_object(@vapp)
   $status = $server_object["details"][0]["status"]
   $ip = $server_object["details"][0]["ip"]
-  call sys_log("server powered on",to_s($server))
 end
 
 # make RS audit_entries
@@ -309,5 +330,14 @@ define find_shard(@deployment) return $shard_number do
         end
       end
     end
+  end
+end
+
+define handle_timeout($retries) do
+  call sys_log("handle_timeout", to_s($retries))
+  if $retries <  10
+    $_timeout_behavior = "retry"
+  else
+    $_timeout_behavior = "skip"
   end
 end
