@@ -89,7 +89,7 @@ class Server
     # wait for vapp to be running
     wait(vapp, "running")
 
-    Rails.logger.debug "-------- poweroff_vap ------"
+    Rails.logger.debug "-------- poweroff_vapp ------"
     task_id = @connection.poweroff_vapp(vapp[:id])
     @connection.wait_task_completion(task_id)
     # wait for vapp to be stopped

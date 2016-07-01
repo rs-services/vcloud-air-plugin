@@ -67,6 +67,7 @@ RSpec.describe Server, type: :model do
   end
   it 'create vapp' do
     conn = double('VCloudClient::Connection')
+    obj = double()
     expect(conn).to receive(:get_organizations).and_return(orgs)
     expect(conn).to receive(:get_organization_by_name).with(params[:org])
       .and_return(org)
@@ -92,7 +93,8 @@ RSpec.describe Server, type: :model do
     expect(conn).to receive(:wait_task_completion).with("1").exactly(7).times
 
     expect(conn).to receive(:get_vapp).with(vapp[:id])
-      .and_return(vapp).exactly(4).times
+      .and_return(vapp).exactly(2).times
+
 
     expect(conn).to receive(:rename_vm).with(vm[:id],params[:name]).
       and_return('1')
@@ -112,6 +114,10 @@ RSpec.describe Server, type: :model do
     expect(conn).to receive(:logout)
     expect(Session).to receive(:create).and_return(conn)
     server = Server.new(params)
+
+    allow(server).to receive(:wait).with(vapp,'running').exactly(2).times
+    allow(server).to receive(:wait).with(vapp,'stopped').exactly(2).times
+
     expect(server.create).to eq(vapp)
   end
 
