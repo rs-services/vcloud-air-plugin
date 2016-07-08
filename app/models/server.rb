@@ -7,7 +7,7 @@ class Server
 
   attr_accessor :instance_uuid, :connection, :name, :template, :network,
                 :org, :catalog, :vdc, :description, :cloud, :server_template,
-                :rs_api_refresh_token, :rs_api_host,:deployment
+                :rs_api_refresh_token, :rs_api_host,:deployment, :platform
 
   validates :name, presence: true
   validates :template, presence: true
@@ -21,6 +21,7 @@ class Server
   validates :rs_api_host, presence: true
   validates :server_template, presence: true
   validates :deployment, presence: true
+  validates :platform, presence: true
 
   def initialize(attributes = {})
     attributes.each do |name, value|
@@ -31,7 +32,7 @@ class Server
   ## server.create
   #
   def create
-    raise "missing fields" unless self.valid?
+    raise errors.full_messages unless self.valid?
     @connection = Session.create
     orgs = @connection.get_organizations
     Rails.logger.debug "------- get_organization_by_name(#{@org}) -------"
@@ -99,8 +100,8 @@ class Server
     # use guest customization to install RL10
     # need to also send new password, otherwise there is no password
     task_id = @connection.set_vm_guest_customization(vm[:id], name,
-    {enabled: true, customization_script: script(dns: found_network[:gateway]),
-      admin_passwd_enabled: true,admin_passwd: 'right$cale'})
+    {enabled: true, customization_script: script(),
+      admin_passwd_enabled: true,admin_passwd: 'Right$cale'})
     @connection.wait_task_completion(task_id)
 
     # poweron vapp/vm
@@ -114,13 +115,21 @@ class Server
     Rails.logger.debug "vapp: #{vapp}"
     Rails.logger.debug "vm: #{vm}"
     Rails.logger.info "------- vApp ID #{vapp[:id]}"
-
     @connection.logout
     vapp
-  rescue => e
-    Rails.logger.error e.message
-    Rails.logger.info "------- vApp ID #{vapp[:id]}" if vapp
-    errors.add(:base, e.message)
+    rescue => e
+      Rails.logger.error e.message
+      Rails.logger.info "------- vApp ID #{vapp[:id]}" if vapp
+      errors.add(:base, e.message)
+      # if vapp[:status]=='running'
+      #   Rails.logger.debug "-------- poweroff_vapp ------"
+      #   task_id = @connection.poweroff_vapp(vapp[:id])
+      #   @connection.wait_task_completion(task_id)
+      #   # wait for vapp to be stopped
+      #   wait(vapp, "stopped")
+      # end
+      # Rails.logger.debug "-------- poweroff_vapp ------"
+      # @connection.delete_vapp(vapp[:id])
   end
 
   ##
@@ -265,22 +274,42 @@ class Server
     end
   end
 
-  # rename server to comply with vcloud-air naming.  can not contain spaces
+  # rename server to comply with vcloud-air naming conventions,
+  # can not contain spaces
   def name
     @name.gsub(" ","-") if @name
   end
 
-  # run script to enable RL10
   def script(params={})
-    cmd = "#!/bin/sh\n"
-    cmd << "if [ x$1 == x'postcustomization' ]; then\n"
-    cmd << "echo nameserver #{params[:dns]} >> /etc/resolv.conf\n"
-    cmd << "echo 'Installing RightLink'\n"
-    cmd << "curl -s https://rightlink.rightscale.com/rll/10.4.0/rightlink.enable.sh \
+    case @platform.downcase
+    when "linux"
+      linux_script(params)
+    when "windows"
+      windows_script(params)
+    end
+  end
+  # run script to enable RL10 for linux
+  def linux_script(params={})
+    cmd = %{#!/bin/sh
+      if [ x$1 == x'postcustomization' ]; then
+        echo 'Installing RightLink'
+        curl -s https://rightlink.rightscale.com/rll/10/rightlink.enable.sh \
      | bash -s -- -l -k '#{@rs_api_refresh_token}' -t '#{@server_template}' \
      -n '#{@name}' -d '#{@deployment}' -c uca -f #{@cloud} \
-     -a '#{@rs_api_host}'\n"
-    cmd << "fi\n"
+     -a '#{@rs_api_host}'
+     fi}
     cmd.encode('utf-8')
   end
+
+  # run script to enable RL10 for windows
+  def windows_script(params={})
+    cmd = %{@echo off\n\r
+if “%1%” == “postcustomization” (\n\r
+echo Installing RightLink\n\r
+powershell -Command "(New-Object Net.WebClient).DownloadFile('https://rightlink.rightscale.com/rll/10/rightlink.enable.ps1', 'rightlink.enable.ps1')"\n\r
+Powershell -ExecutionPolicy Unrestricted -File rightlink.enable.ps1  -refreshToken  #{@rs_api_refresh_token} -serverTemplateName "#{@server_template}"   -ServerName #{@name} -deploymentName #{@deployment} -cloudType uca  -ApiServer #{@rs_api_host}\n\r
+)}
+cmd.encode('utf-8')
+  end
+
 end

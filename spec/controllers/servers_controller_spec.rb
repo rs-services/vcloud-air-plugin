@@ -6,7 +6,7 @@ before{
   config = YAML.load_file("#{Rails.root}/config/vcloudair.yml")[Rails.env]
   request.headers["X-Api-Shared-Secret"]=config["api-shared-secret"]
 }
-  
+
   let(:create_params) {
     { org: 'TelstraTestvdc001',
       vdc: 'TelstraTestvdc001',
@@ -15,7 +15,8 @@ before{
       parent_network: 'OnRampMigrations',
       network: 'TelstraTestvdc001',
       name: 'myvapp-name',
-      description: 'myvapp description'}
+      description: 'myvapp description',
+      platform: 'linux'}
     }
   let(:destroy_params) {
     { vapp_id: '123'}

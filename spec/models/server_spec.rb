@@ -62,7 +62,8 @@ RSpec.describe Server, type: :model do
       server_template: 'my server_template',
       cloud: 'vCloudPOC',
       rs_api_host: 'us-4.rightscale.com',
-      rs_api_refresh_token: 'mytoken'
+      rs_api_refresh_token: 'mytoken',
+      platform: 'linux'
     }
   end
   it 'create vapp' do
@@ -101,7 +102,7 @@ RSpec.describe Server, type: :model do
 
     expect(conn).to receive(:set_vm_guest_customization).with(vm[:id], params[:name],
     {enabled: true, customization_script: /Installing RightLink/,
-      admin_passwd_enabled: true,admin_passwd: 'right$cale'}).and_return('1')
+      admin_passwd_enabled: true,admin_passwd: 'Right$cale'}).and_return('1')
 
     expect(conn).to receive(:poweron_vapp).with(vapp[:id]).and_return('1').
       exactly(2).times

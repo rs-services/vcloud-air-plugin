@@ -24,12 +24,18 @@ mapping "os_mapping" do
   {
     "CentOS" => {
      "template" => "CentOS64-64BIT",
+     "platform" => "Linux",
+     "server_template" => "RightScale UCA base"
     },
     "Ubuntu" => {
      "template" => "Ubuntu Server 12.04 LTS (amd64 20150127)",
+     "platform" => "Linux",
+     "server_template" => "RightScale UCA base"
     },
     "Windows" => {
       "template" => "W2K12-STD-64BIT",
+      "platform" => "Windows",
+      "server_template" => "RightLink 10.5.0 Windows Base"
     },
   }
 end
@@ -37,15 +43,16 @@ end
 
 resource "vapp", type: "vcloudair.server" do
   org "TelstraTestvdc001"                   # the vcloudair organization
-  name "Server 1"                           # the vapp name
+  name "Server 1"                           # the vapp name use for vm name, and RS server name.
   vdc "TelstraTestvdc001"                   # the virtual data center  for the vapp
   network $network                          # the network(s) to place the vApp
   template map($os_mapping, $os,'template') # the template to build the vApp
   catalog "Public Catalog"                  # The catalog where to find the template
   description "My vApp from SelfService"    # The description of the vApp
-  cloud "vCloudPOC"                         # name of the UCA cloud
-  server_template "RightScale UCA base"     # ServerTemplate Name
-  deployment @@deployment.name
+  cloud "vCloudPOC"                         # name of the UCA cloud passed to RL enable script
+  server_template map($os_mapping, $os,'server_template')     # ServerTemplate Name passed to RL enable script
+  deployment @@deployment.name              # deployment valued passed to RL enable script
+  platform map($os_mapping, $os,'platform') #
 end
 
 namespace "vcloudair" do
@@ -110,6 +117,10 @@ namespace "vcloudair" do
         type "string"
         required true
       end
+      field "platform" do
+        type "string"
+        required true
+      end
     end
   end
 end
@@ -118,10 +129,13 @@ end
 define provision_vapp(@raw_server) return @vapp do
   call getCredential("RS_API_REFRESH_TOKEN") retrieve $refresh_token
   call find_shard(@@deployment) retrieve $shard_number
+  $deployment_values = split(@@deployment.name,'-')
+  $server_name=join($deployment_values[0..-2], '-')
+
   @vapp = vcloudair.server.create({
     server:{
     org: @raw_server.org,
-    name: @raw_server.name,
+    name: $server_name,
     vdc: @raw_server.vdc,
     network: @raw_server.network,
     template: @raw_server.template,
@@ -131,7 +145,8 @@ define provision_vapp(@raw_server) return @vapp do
     deployment: @raw_server.deployment,
     server_template: @raw_server.server_template,
     rs_api_refresh_token: $refresh_token,
-    rs_api_host: join(["us-",$shard_number,".rightscale.com"])
+    rs_api_host: join(["us-",$shard_number,".rightscale.com"]),
+    platform: @raw_server.platform
   }
    })
 end
