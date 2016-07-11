@@ -5,7 +5,7 @@ class Server
   extend ActiveModel::Naming
   include ActiveModel::AttributeMethods
 
-  attr_accessor :instance_uuid, :connection, :name, :template, :network,
+  attr_accessor :name, :template, :network,
                 :org, :catalog, :vdc, :description, :cloud, :server_template,
                 :rs_api_refresh_token, :rs_api_host,:deployment, :platform
 
@@ -291,7 +291,7 @@ class Server
   # run script to enable RL10 for linux
   def linux_script(params={})
     cmd = %{#!/bin/sh
-      if [ x$1 == x'postcustomization' ]; then
+      if [ x$1 = x'postcustomization' ]; then
         echo 'Installing RightLink'
         curl -s https://rightlink.rightscale.com/rll/10/rightlink.enable.sh \
      | bash -s -- -l -k '#{@rs_api_refresh_token}' -t '#{@server_template}' \
