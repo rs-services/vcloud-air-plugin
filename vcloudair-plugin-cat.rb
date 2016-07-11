@@ -1,6 +1,13 @@
-name "vclould air plugin"
+name "vClould Air Plugin"
 rs_ca_ver 20131202
 short_description "vCloud Air Plugin Example"
+long_description "This CloudApp will launch servers in a vCloud Air dedicated tenancy.
+### Features
+* Launch, Terminate, Stop, Start VM in vCloudAir
+* Supports Centos, Ubuntu and Windows
+* Enables RightLink to during boot
+* CloudApp name becomes VM and vApp name in vCloudAir
+"
 
 parameter "network" do
   type "list"
@@ -57,7 +64,7 @@ end
 
 namespace "vcloudair" do
   service do
-    host "http://d33297d9.ngrok.io" # HTTP endpoint presenting an API defined by self-serviceto act on resources
+    host "http://3ddac91b.ngrok.io" # HTTP endpoint presenting an API defined by self-serviceto act on resources
     path "/plugin"  # path prefix for all resources, RightScale account_id substituted in for multi-tenancy
     headers do {
       "user-agent" => "self_service" ,          # special headers as needed
@@ -203,24 +210,6 @@ operation "launch" do
   } end
 end
 
-operation "Stop Server" do
-  definition           "do_stop"
-  description          "suspend_vapp the server from running state."
-  output_mappings do {
-    $server_status => $status,
-    $server_ip => $ip
-    } end
-end
-
-operation "Start Server" do
-  definition           "do_start"
-  description          "Start the server from suspended state"
-  output_mappings do {
-    $server_status => $status,
-    $server_ip => $ip
-    } end
-end
-
 operation "Power Off Server" do
   definition           "do_power_off"
   description          "Power off a running server"
@@ -268,22 +257,6 @@ define launch_handler(@vapp) return @vapp, $status, $ip do
   $vapp_object = to_object(@vapp)
   $status = $vapp_object["details"][0]["status"]
   $ip = $vapp_object["details"][0]["ip"]
-end
-
-# stop server from running state
-define do_stop(@vapp) return @vapp,$status, $ip do
-  @vapp.stop()
-  $server_object = to_object(@vapp)
-  $status = $server_object["details"][0]["status"]
-  $ip = $server_object["details"][0]["ip"]
-end
-
-# start the server from paused/suspended state
-define do_start(@vapp) return @vapp,$status, $ip do
-  @vapp.start()
-  $server_object = to_object(@vapp)
-  $status = $server_object["details"][0]["status"]
-  $ip = $server_object["details"][0]["ip"]
 end
 
 # power off the server from running state
