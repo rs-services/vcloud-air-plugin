@@ -127,9 +127,9 @@ RSpec.describe Server, type: :model do
     expect(conn).to receive(:get_organizations).and_return(orgs)
       .and_raise(RuntimeError, 'failed')
     expect(Session).to receive(:create).and_return(conn)
+    expect(conn).to receive(:logout)
     server = Server.new(params)
     server.create
-    expect(server.errors.full_messages).to include 'failed'
   end
 
   it 'invalid server' do

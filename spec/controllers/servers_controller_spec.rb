@@ -28,7 +28,8 @@ before{
   it 'create server' do
     server = double("Server")
     expect(Server).to receive(:new).with(create_params).
-      and_return(server)
+      and_return(server).exactly(2).times
+    expect(server).to receive(:valid?).and_return(true)
     expect(server).to receive(:create).and_return({id: 'abc',task_id: '123'})
     post :create, {server: create_params}
     expect(response).to be_successful
@@ -42,11 +43,12 @@ before{
   it 'create failed with error' do
     server = double("Server")
     expect(Server).to receive(:new).with(create_params).
-      and_return(server)
+      and_return(server).exactly(2).times
+    expect(server).to receive(:valid?).and_return(true)
     expect(server).to receive(:create).and_raise(RuntimeError,"failed")
     post :create , {server: create_params}
     expect(response).to_not be_successful
-    expect(response.body).to eq "failed"
+    expect(response.body).to eq "{\"message\":\"failed\"}"
   end
 
   it 'destroy' do
@@ -114,6 +116,27 @@ before{
     expect(response).to be_successful
     expect(response.headers["Content-Type"]).to include "application/vnd.vcloudair.servers+json"
     expect(response.body).to eq(vapp.to_json)
+  end
+
+  it "validate_params" do
+    server = double("Server")
+    expect(Server).to receive(:new).with(create_params).
+      and_return(server)
+    expect(server).to receive(:errors).and_return(nil)
+    expect(server).to receive(:valid?)
+    post :create, {server: create_params}
+    expect(response.status).to eq 200
+  end
+
+  it "validate_params w/errors" do
+    server = double("Server")
+    #new_params = create_params.reject{ |k,v| k== :platorm }
+    expect(Server).to receive(:new).with(create_params).
+      and_return(server)
+    expect(server).to receive(:errors).and_return('boom')
+    expect(server).to receive(:valid?).and_return(false)
+    post :create, {server: create_params}
+    expect(response.body).to eq  "{\"message\":\"boom\"}"
   end
 
 end
