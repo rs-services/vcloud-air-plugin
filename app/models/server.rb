@@ -32,7 +32,6 @@ class Server
   ## server.create
   #
   def create
-    raise errors.full_messages unless self.valid?
     @connection = Session.create
     orgs = @connection.get_organizations
     Rails.logger.debug "------- get_organization_by_name(#{@org}) -------"
@@ -118,18 +117,20 @@ class Server
     @connection.logout
     vapp
     rescue => e
-      Rails.logger.error e.message
-      Rails.logger.info "------- vApp ID #{vapp[:id]}" if vapp
-      errors.add(:base, e.message)
-      # if vapp[:status]=='running'
-      #   Rails.logger.debug "-------- poweroff_vapp ------"
-      #   task_id = @connection.poweroff_vapp(vapp[:id])
-      #   @connection.wait_task_completion(task_id)
-      #   # wait for vapp to be stopped
-      #   wait(vapp, "stopped")
-      # end
-      # Rails.logger.debug "-------- poweroff_vapp ------"
-      # @connection.delete_vapp(vapp[:id])
+       Rails.logger.error e.message
+       Rails.logger.debug e.backtrace.join("\n")
+      if vapp# && e.message =~ /busy/
+         Rails.logger.info "------- vApp ID #{vapp[:id]}"
+         # vapp sometimes has vapp_id instead of id.
+         # make sure it always returns hash with id
+         id = vapp.has_key?(:vapp_id) ? vapp[:vapp_id]: vapp[:id]
+         vapp.merge!(id: id) if vapp
+         Rails.logger.info "------- deleting failed vapp #{id}"
+         task_id = @connection.poweroff_vapp(id)
+         @connection.wait_task_completion(task_id)
+         @connection.delete_vapp(id)
+       end
+       @connection.logout
   end
 
   ##
