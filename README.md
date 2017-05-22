@@ -13,7 +13,7 @@ hostname and port where this service is hosted.
 * vCloud Air networks must must route to the internet to allow enable RightLink 10
 * vCloud Air Dedicated account
 * CentOS, Ubuntu or Windows 2012 Templates
-* 
+*
 
 ### Limitations/Known Issues
 * Cloud app and server names must be unique.  vCloud Air dosen't allow duplicate vm/vapp names
@@ -26,23 +26,45 @@ hostname and port where this service is hosted.
 
 
 ### Configuration
-* git clone git@github.com:rs-services/vcloud-air-plugin.git
-* cd vcloud-air-plugin
-* cp config/vcloudair.example config/vcloudair.yml
-* change/add values in config/vcloudair.yml
+
+Clone the repository:
+
+    $ git clone git@github.com:rs-services/vcloud-air-plugin.git
+    $ cd vcloud-air-plugin
+    $ cp config/vcloudair.example config/vcloudair.yml
+
+Then, change/add values in `config/vcloudair.yml`:
    * Add vCloud Air API Host - API endpoint
    * Add vCloud Air API username
    * Add vCloud Air API Password
    * Add vCloud Air API Organization
-   * Add API-Shared-Secret to match CAT file headers.
-* bundle install
+   * Add API-Shared-Secret to match CAT file headers
+
+Install the bundle:
+
+    $ bundle install
 
 ### Running the server
-* bundle exec rails s -d -e production -p 8080
-* tail -f logs/production.log
+
+    $ bundle exec rails s -d -e production -p 8080
+
+Check the logs in realtime:
+
+    $ tail -f logs/production.log
+
+
+### Docker
+
+Build:
+
+    $ docker build -t vcloud-air-plugin .
+
+Run:
+
+    $ docker run -it -p 8080:8080 vcloud-air-plugin
 
 ### Networking
-There are a number of options for a network configuration. The only requirement is application must be accessible from the internet, through direct access or a tunnel in a private network, and must be able to reach the vCloud API Endpoint.  Common solutions would be to deploy in a public cloud with multiple VM's and a Load Balancer.  In a private network, using [ngrok](https://ngrok.com/) tunnel is roubust and secure. 
+There are a number of options for a network configuration. The only requirement is application must be accessible from the internet, through direct access or a tunnel in a private network, and must be able to reach the vCloud API Endpoint.  Common solutions would be to deploy in a public cloud with multiple VM's and a Load Balancer.  In a private network, using [ngrok](https://ngrok.com/) tunnel is roubust and secure.
 
 ### Example CloudApp
 Use the example CloudApp [vcloudair-plugin-cat.rb](vcloudair-plugin-cat.rb) to create a single server in
