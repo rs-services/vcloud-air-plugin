@@ -50,7 +50,7 @@ Install the bundle:
 
 Check the logs in realtime:
 
-    $ tail -f logs/production.log
+    $ tail -f log/production.log
 
 
 ### Docker
