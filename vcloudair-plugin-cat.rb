@@ -13,7 +13,7 @@ parameter "network" do
   type "list"
   label "Network"
   description "Select the network to launch into"
-  allowed_values "TELSTRATESTVDC001-DEFAULT-ROUTED", "DAVETEST-NET","OnRampMigrations","TELSTRATESTVDC001-DEFAULT-ISOLATED"
+  allowed_values "Network1","Network 2"
   default "OnRampMigrations"
   operations "launch"
 end
@@ -49,9 +49,9 @@ end
 
 
 resource "vapp", type: "vcloudair.server" do
-  org "TelstraTestvdc001"                   # the vcloudair organization
+  org "MyOrg"                   # the vcloudair organization
   name "Server 1"                           # the vapp name use for vm name, and RS server name.
-  vdc "TelstraTestvdc001"                   # the virtual data center  for the vapp
+  vdc "Network1"                   # the virtual data center  for the vapp
   network $network                          # the network(s) to place the vApp
   template map($os_mapping, $os,'template') # the template to build the vApp
   catalog "Public Catalog"                  # The catalog where to find the template
